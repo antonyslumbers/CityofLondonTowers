@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<!--
+  THE SQUARE MILE RISES — City of London + Broadgate fringe, 1980–2026 (+ approved pipeline to ~2032)
+  Antony Slumbers — #SpaceAsAService
+  Single self-contained HTML file. Three.js r128 via cdnjs. No build step, no local assets.
+
+  ============================== DATA PROVENANCE ==============================
+  VERIFIED (high confidence — dated, sized and labelled in the scene):
+    Tower 42 (1980, 183m, 42 st, Seifert & Partners)
+    Lloyd's Building (1986, 88m roof / 95.1m incl. cranes, 14 st, Richard Rogers Partnership)
+    Exchange House (1990, 60m, 10 st, SOM — SOM/METALOCUS project data; one AIA source says 1991)
+    30 St Mary Axe "The Gherkin" (2004, 180m, 41 st, Foster + Partners)
+    Heron Tower / Salesforce Tower (2011, 230m incl. mast / 202m roof, 46 st, KPF)
+    The Leadenhall Building "Cheesegrater" (2014, 225m, 48 st, RSHP)
+    The Scalpel (2018, 190m, 38 st, KPF)
+    22 Bishopsgate (2020, 278m, 62 st, PLP Architecture)
+
+  MEDIUM / MEDIUM-HIGH confidence:
+    20 Fenchurch Street "Walkie-Talkie" (2014 public opening used, 160m, 34 st, Rafael Viñoly)
+    100 Liverpool Street (2020, Hopkins Architects, British Land's first net-zero building —
+      year verified via Buildington/RIBAJ/SRM; NO VERIFIED HEIGHT — modelled at indicative
+      estate scale, height omitted from tooltip)
+    1 Broadgate (mid-2025, AHMM — Building/BD Apr 2026; NO VERIFIED HEIGHT — same treatment)
+    Broadgate estate — stylised phased massing rising 1985–1991 (1 Finsbury Avenue 1984 first
+      building per Architects' Journal; "bulk complete by 1992"; SOM/Arup Associates masterplan,
+      Rosehaugh Stanhope). Individual estate blocks NOT separately dated or sized — indicative
+      ~10-storey massing, stated as such in the tooltip.
+
+  SOFT — flagged in the UI, verify before publishing as fact:
+    Broadgate Tower (2008, SOM, British Land) — HEIGHT CONFLICT: SOM's own site says 178m /
+      33 storeys; Wikipedia tallest-buildings list & e-architect say 165m / 35 storeys (likely
+      roof vs structural-tip datum, but the split is unverified). Conservative 165m modelled;
+      both figures shown in the tooltip.
+    8 Bishopsgate — height 204m corroborated; completion year 2023 approximate; storeys unknown
+      (storeys OMITTED from the tooltip rather than guessed).
+    1 Undershaft (pipeline) — sources conflict: ~290m (roof) vs 309.6m (incl. spire).
+      The lower, conservative 290m is used for geometry; the conflict is stated in the tooltip.
+    100 Leadenhall "The Diamond" (pipeline) — sources conflict: 249m vs 263.4m. The lower
+      249m is used for geometry; the range is stated in the tooltip.
+    2 Finsbury Avenue (pipeline, due 2027) — 170m east tower (36 st) + 21-st west tower +
+      12-st podium, 3XN, topped out Jan 2026 (Sir Robert McAlpine, contractor). An older 154m
+      figure appears in Wikipedia's list (likely an earlier scheme iteration) — flagged.
+      West tower height derived proportionally (21/36 × 170 ≈ 99m) — stated assumption.
+
+  OMITTED (deliberately — not laziness):
+    85 Gracechurch St / 63 St Mary Axe / 130 Fenchurch St — recently approved mid-rise consents.
+      No verified heights supplied; Antony holds a precisely sourced dataset from his City of
+      London consents-map project. Excluded rather than guessed.
+    13–14 Appold Street (~156m approved) — single-source figure, no verified expected
+      completion year; excluded pending the consents-map dataset.
+
+  EVERYTHING ELSE is a single undated, static base layer of stylised low-to-mid-rise grey
+  massing (procedural, seeded, non-literal). It never changes across the timeline and is not
+  clickable — the honest representation of what this dataset actually knows.
+
+  Building positions are APPROXIMATE (derived from published addresses/coordinates, projected
+  to a local metre grid). Silhouettes are stylised massing, not facade reconstructions.
+
+  CONFIG (as supplied, scope expanded on request 5 Jul 2026):
+    GEOGRAPHIC_SCOPE = square_mile_plus_broadgate_fringe | VISUAL_STYLE = stylised_massing
+    INCLUDE_PIPELINE = true | CAMERA_MODE = guided_flythrough | TARGET_RUNTIME = 60s (1980→2026)
+
+  Derived colours (transparent derivations, not new palette values):
+    Ground plane  = Dark #222831 lightened ~6% for figure/ground separation.
+    Thames band   = Dark #222831 lerped 25% toward steel blue #7DA7C4.
+    Estate blocks = steel blue #7DA7C4 lerped 45% toward Dark — same hue family as wave 2,
+                    stepped down so the individually dated towers still read as the data layer.
+  =============================================================================
+-->
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Square Mile Rises — City of London, 1980–2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dark:#222831; --dark-lighter:#4A5568; --gold:#fbb040; --yellow:#f9ed32;
+    --steel:#7DA7C4; --muted-gold:#D4930F; --mid-grey:#A0AEC0; --white:#FFFFFF;
+    --warn:#DE756F;
+    --panel:rgba(74,85,104,.38); --hairline:rgba(74,85,104,.9);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--dark);
+    font-family:'Inter',system-ui,sans-serif;color:var(--white);
+    -webkit-font-smoothing:antialiased}
+  #scene{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab}
+  #scene.dragging{cursor:grabbing}
+
+  /* ---------- Title block ---------- */
+  #titleBlock{position:fixed;top:28px;left:32px;z-index:5;pointer-events:none;max-width:420px}
+  .eyebrow{font:600 .68rem 'Inter',system-ui,sans-serif;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+  h1{font:700 clamp(1.5rem,3.2vw,2.15rem)/1.08 'Fraunces',Georgia,serif;color:var(--white)}
+  .sub{font:400 .82rem/1.45 'Inter',system-ui,sans-serif;color:var(--mid-grey);margin-top:7px}
+  #yearReadout{font:600 clamp(2.6rem,6vw,4rem)/1 'Fraunces',Georgia,serif;
+    color:var(--gold);margin-top:16px;font-variant-numeric:tabular-nums}
+  #chapter{margin-top:12px;max-width:380px;opacity:0;transition:opacity .5s}
+  #chapterTitle{font:600 .95rem 'Fraunces',Georgia,serif;color:var(--white)}
+  #chapterText{font:400 .8rem/1.5 'Inter',system-ui,sans-serif;color:var(--mid-grey);margin-top:3px}
+
+  /* ---------- Legend ---------- */
+  #legend{position:fixed;top:28px;right:32px;z-index:5;background:var(--panel);
+    border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;
+    backdrop-filter:blur(8px);box-shadow:0 10px 34px rgba(0,0,0,.55);min-width:196px}
+  #legend h2{font:600 .68rem 'Inter',system-ui,sans-serif;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--mid-grey);margin-bottom:10px}
+  .lRow{display:flex;align-items:center;gap:9px;font:500 .74rem 'Inter',system-ui,sans-serif;
+    color:var(--white);margin-top:7px}
+  .swatch{width:13px;height:13px;border-radius:3px;flex:none}
+  .swatch.ghost{background:transparent;border:1.5px dashed var(--mid-grey)}
+  .lRow small{color:var(--mid-grey);font-weight:400}
+
+  /* ---------- Controls ---------- */
+  #controls{position:fixed;left:32px;right:32px;bottom:26px;z-index:5;
+    display:flex;align-items:center;gap:14px}
+  button{font:600 .74rem 'Inter',system-ui,sans-serif;color:var(--white);
+    background:var(--panel);border:1px solid var(--hairline);border-radius:8px;
+    padding:9px 13px;cursor:pointer;backdrop-filter:blur(8px);white-space:nowrap}
+  button:hover{border-color:var(--mid-grey)}
+  button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  #scrubWrap{flex:1;position:relative;height:40px;cursor:pointer;touch-action:none}
+  #scrubTrack{position:absolute;left:0;right:0;top:14px;height:10px;border-radius:5px;
+    overflow:hidden;display:flex;border:1px solid var(--hairline)}
+  .band{height:100%}
+  #scrubFill{position:absolute;left:0;top:14px;height:10px;border-radius:5px 0 0 5px;
+    background:rgba(34,40,49,.55);pointer-events:none;right:0;transform-origin:right}
+  #thumb{position:absolute;top:8px;width:4px;height:22px;background:var(--yellow);
+    border-radius:2px;pointer-events:none;box-shadow:0 0 8px rgba(249,237,50,.6)}
+  #ticks{position:absolute;left:0;right:0;top:28px;height:14px;pointer-events:none}
+  .tick{position:absolute;transform:translateX(-50%);font:400 .62rem 'Inter',system-ui,sans-serif;
+    color:var(--mid-grey);font-variant-numeric:tabular-nums}
+
+  /* ---------- Tooltip ---------- */
+  #tooltip{position:fixed;z-index:8;display:none;max-width:290px;background:rgba(34,40,49,.92);
+    border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;
+    box-shadow:0 10px 34px rgba(0,0,0,.55);backdrop-filter:blur(8px)}
+  #tooltip h3{font:600 1.05rem/1.2 'Fraunces',Georgia,serif;color:var(--white)}
+  #tooltip .addr{font:400 .7rem 'Inter',system-ui,sans-serif;color:var(--mid-grey);margin-top:2px}
+  #tooltip .data{font:500 .76rem/1.55 'Inter',system-ui,sans-serif;color:var(--white);
+    margin-top:9px;font-variant-numeric:tabular-nums}
+  #tooltip .data span{color:var(--mid-grey);font-weight:400}
+  #tooltip .flag{font:500 .7rem/1.45 'Inter',system-ui,sans-serif;color:var(--warn);
+    margin-top:8px;padding-top:8px;border-top:1px solid var(--hairline)}
+  #tooltip .close{position:absolute;top:8px;right:10px;border:none;background:none;
+    color:var(--mid-grey);font-size:.9rem;padding:2px 4px;cursor:pointer}
+
+  /* ---------- Hint & credit ---------- */
+  #hint{position:fixed;bottom:82px;left:50%;transform:translateX(-50%);z-index:4;
+    font:400 .72rem 'Inter',system-ui,sans-serif;color:var(--mid-grey);
+    background:rgba(34,40,49,.7);border:1px solid var(--hairline);border-radius:20px;
+    padding:6px 16px;transition:opacity 1.2s;pointer-events:none}
+  #credit{position:fixed;bottom:74px;right:32px;z-index:6;
+    font:600 .7rem 'Inter',system-ui,sans-serif;letter-spacing:.06em;color:var(--mid-grey)}
+  #credit b{color:var(--gold);font-weight:600}
+
+  #fallback{display:none;position:fixed;inset:0;z-index:20;background:var(--dark);
+    color:var(--white);padding:40px;font:400 .9rem/1.6 'Inter',system-ui,sans-serif}
+
+  @media (max-width:760px){
+    #titleBlock{left:18px;top:18px;max-width:70vw}
+    #legend{display:none}
+    #controls{left:14px;right:14px;bottom:16px;gap:8px}
+    #credit{display:none}
+    #yearReadout{margin-top:8px}
+  }
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Animated 3D map of City of London landmark towers rising between 1980 and 2026"></canvas>
+
+<div id="titleBlock">
+  <div class="eyebrow">City of London &amp; Broadgate · 1980–2026</div>
+  <h1>The Square Mile rises</h1>
+  <div class="sub">Four waves of landmark towers, from the eastern cluster to the Broadgate fringe. Verified dates and heights only — everything else stays grey.</div>
+  <div id="yearReadout">1980</div>
+  <div id="chapter"><div id="chapterTitle"></div><div id="chapterText"></div></div>
+</div>
+
+<div id="legend">
+  <h2>Four waves</h2>
+  <div class="lRow"><span class="swatch" style="background:#D4930F"></span>1980–86 <small>Deregulation dawn</small></div>
+  <div class="lRow"><span class="swatch" style="background:#7DA7C4"></span>1987–2003 <small>Quiet decades</small></div>
+  <div class="lRow"><span class="swatch" style="background:#fbb040"></span>2004–14 <small>Icon era</small></div>
+  <div class="lRow"><span class="swatch" style="background:#FFFFFF"></span>2015–26 <small>Cluster consolidates</small></div>
+  <div class="lRow"><span class="swatch ghost"></span><small>Approved, not yet built</small></div>
+</div>
+
+<div id="controls">
+  <button id="playBtn" aria-pressed="true">Pause</button>
+  <button id="camBtn" aria-pressed="true">Auto camera</button>
+  <div id="scrubWrap" role="slider" aria-label="Timeline year" aria-valuemin="1980" aria-valuemax="2032" tabindex="0">
+    <div id="scrubTrack"></div>
+    <div id="thumb"></div>
+    <div id="ticks"></div>
+  </div>
+</div>
+
+<div id="hint">Drag to orbit · scroll or pinch to zoom · click a tower for details</div>
+<div id="tooltip" role="dialog"><button class="close" aria-label="Close">✕</button><div id="ttBody"></div></div>
+<div id="credit">Antony Slumbers — <b>#SpaceAsAService</b></div>
+<div id="fallback">This visualisation needs WebGL, which your browser has disabled or doesn't support.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+/* ============================ CONFIG ============================ */
+var YEAR_START=1980, YEAR_BUILT_END=2026, YEAR_END=2032;
+var TARGET_RUNTIME=60;                       // seconds, 1980 -> 2026
+var PLAY_RATE=(YEAR_BUILT_END-YEAR_START)/TARGET_RUNTIME; // years per second
+var INCLUDE_PIPELINE=true;
+var RISE_YEARS=1.4;                          // how long each tower takes to rise
+
+/* Palette (verified brand values + sanctioned derivations) */
+var C={dark:0x222831, darkLighter:0x4A5568, gold:0xfbb040, yellow:0xf9ed32,
+       steel:0x7DA7C4, muted:0xD4930F, mid:0xA0AEC0, white:0xffffff};
+var WAVE_COLOURS=[C.muted, C.steel, C.gold, C.white];
+
+/* ======================= VERIFIED DATASET ======================= */
+/* pos = approximate local metres [x east, z south] from cluster centre (~51.5140, -0.0820) */
+var LANDMARKS=[
+ {id:'t42', name:'Tower 42 (originally NatWest Tower)', addr:'25 Old Broad Street',
+  year:1980, hM:183, storeys:42, arch:'R. Seifert & Partners', wave:0, pos:[-125,-167],
+  shape:'hex', fp:19,
+  note:'First true skyscraper in the City; tallest in the UK until 1991.'},
+ {id:'lloyds', name:"Lloyd's Building", addr:'1 Lime Street',
+  year:1986, hM:88, storeys:14, arch:'Richard Rogers Partnership (now RSHP)', wave:0, pos:[-7,145],
+  shape:'lloyds',
+  heightLabel:'88 m roof · 95.1 m incl. cranes',
+  note:"'Inside-out' Bowellism — services on the exterior. Grade I listed 2011."},
+ {id:'gherkin', name:'30 St Mary Axe — “The Gherkin”', addr:'30 St Mary Axe',
+  year:2004, hM:180, storeys:41, arch:'Foster + Partners', wave:2, pos:[118,-56],
+  shape:'gherkin',
+  note:'Originally the Swiss Re Tower. RIBA Stirling Prize 2004.'},
+ {id:'heron', name:'Heron Tower (now Salesforce Tower)', addr:'110 Bishopsgate',
+  year:2011, hM:230, roofM:202, storeys:46, arch:'Kohn Pedersen Fox', wave:2, pos:[49,-267],
+  shape:'heron', fpX:42, fpZ:34,
+  heightLabel:'230 m incl. mast · 202 m to roof'},
+ {id:'leadenhall', name:'The Leadenhall Building — “The Cheesegrater”', addr:'122 Leadenhall Street',
+  year:2014, hM:225, storeys:48, arch:'Rogers Stirk Harbour + Partners', wave:2, pos:[-7,22],
+  shape:'wedge', fpX:48, fpZ:36,
+  note:'Built 2011–2014. The tapering profile protects views of St Paul\u2019s.'},
+ {id:'fenchurch', name:'20 Fenchurch Street — “The Walkie-Talkie”', addr:'20 Fenchurch Street',
+  year:2014, hM:160, storeys:34, arch:'Rafael Viñoly', wave:2, pos:[-97,300],
+  shape:'flare', fpX:46, fpZ:32,
+  soft:'Completion year: 2014 public opening used (some sources cite 2013 topping-out).'},
+ {id:'scalpel', name:'The Scalpel', addr:'52–54 Lime Street',
+  year:2018, hM:190, storeys:38, arch:'Kohn Pedersen Fox', wave:3, pos:[69,111],
+  shape:'scalpel', fpX:38, fpZ:32,
+  note:'Angled profile designed to protect St Paul\u2019s sightlines.'},
+ {id:'b22', name:'22 Bishopsgate', addr:'22 Bishopsgate',
+  year:2020, hM:278, storeys:62, arch:'PLP Architecture', wave:3, pos:[-35,-67],
+  shape:'box', fpX:58, fpZ:48,
+  note:'Replaced the cancelled Pinnacle scheme. Currently the City\u2019s tallest building.'},
+ {id:'b8', name:'8 Bishopsgate', addr:'8 Bishopsgate',
+  year:2023, hM:204, storeys:null, arch:'Wilkinson Eyre', wave:3, pos:[-76,22],
+  shape:'stack', fpX:44, fpZ:36,
+  soft:'SOFT — completion year approximate; storey count unverified and omitted. Verify before publishing.'},
+ /* --- Broadgate fringe (scope expanded 5 Jul 2026, sources in header comment) --- */
+ {id:'exchange', name:'Exchange House', addr:'Primrose Street, Broadgate',
+  year:1990, hM:60, storeys:10, arch:'SOM', wave:1, pos:[30,-620],
+  shape:'arch', fpX:78, fpZ:34,
+  note:'Building-bridge hybrid spanning the Liverpool Street rail throat on parabolic arches. AIA Twenty-Five Year Award 2015. Developer Rosehaugh Stanhope with British Rail. One source gives 1991.'},
+ {id:'bgTower', name:'Broadgate Tower', addr:'201 Bishopsgate / 20 Primrose Street',
+  year:2008, hM:165, storeys:null, arch:'SOM', wave:2, pos:[110,-700],
+  shape:'box', fpX:52, fpZ:34,
+  heightLabel:'165 m / 178.3 m — sources conflict',
+  soft:'SOFT — SOM states 178 m and 33 storeys; Wikipedia\u2019s tallest-buildings list and e-architect give 165 m and 35 storeys (likely roof vs structural-tip datum, unconfirmed). Conservative 165 m modelled; storeys omitted.'},
+ {id:'ls100', name:'100 Liverpool Street', addr:'100 Liverpool Street, Broadgate',
+  year:2020, hM:46, storeys:null, arch:'Hopkins Architects', wave:3, pos:[-50,-420],
+  shape:'box', fpX:80, fpZ:56,
+  heightLabel:'height not verified — indicative massing',
+  soft:'Height unverified and omitted — modelled at indicative estate scale only. Year and architect verified.',
+  note:'British Land\u2019s first net-zero carbon building; 1980s Arup structure retained and rebuilt.'},
+ {id:'bg1', name:'1 Broadgate', addr:'1 Broadgate',
+  year:2025, hM:50, storeys:null, arch:'AHMM', wave:3, pos:[-85,-475],
+  shape:'box', fpX:74, fpZ:52,
+  heightLabel:'height not verified — indicative massing',
+  soft:'Height unverified and omitted — modelled at indicative estate scale only. Completed mid-2025; 96% pre-let at completion.'}
+];
+
+/* Broadgate estate — stylised phased massing, 1985–1991 (indicative ~10-storey heights,
+   individual blocks NOT separately dated/sized — see header comment). Collectively clickable. */
+var ESTATE={name:'Broadgate (phased estate)', addr:'Liverpool Street / Bishopsgate fringe',
+  from:1985, to:1991, arch:'SOM / Arup Associates (masterplan)',
+  note:'Stylised estate massing — phased development 1985–1991 (first building 1 Finsbury Avenue, 1984; bulk complete by 1992), developer Rosehaugh Stanhope. Block heights indicative, not verified. Largely rebuilt 2015–2025 by British Land.',
+  blocks:[ // [x, z, w, d, indicative h, phase year the block rises]
+    [-150,-540, 72,52, 38, 1985],[ -60,-560, 66,50, 40, 1986],[  40,-545, 60,48, 36, 1987],
+    [-155,-455, 70,54, 40, 1988],[ -20,-500, 56,46, 34, 1988],[  55,-465, 64,50, 38, 1989],
+    [ -145,-370, 62,48, 36, 1990],[  25,-395, 58,46, 34, 1991]]};
+
+/* Pipeline — approved / under construction, not yet built. Rendered as translucent dashed ghosts. */
+var PIPELINE=[
+ {id:'undershaft', name:'1 Undershaft', addr:'1 Undershaft', ey:2029, hM:290, pos:[49,11], fpX:52, fpZ:44,
+  heightLabel:'≈290 m to roof (some sources: 309.6 m incl. spire)',
+  soft:'SOFT — sources conflict on height datum (roof vs spire). Conservative 290 m modelled. Would be the City\u2019s tallest if built.'},
+ {id:'b55', name:'55 Bishopsgate', addr:'55 Bishopsgate', ey:2029, hM:269, storeys:63, pos:[7,-189], fpX:46, fpZ:40,
+  soft:'Medium confidence — approved scheme, figures subject to change.'},
+ {id:'leaden100', name:'100 Leadenhall — “The Diamond”', addr:'100 Leadenhall Street', ey:2027, hM:249, storeys:57, pos:[21,44], fpX:44, fpZ:38,
+  heightLabel:'249–263.4 m (sources conflict)',
+  soft:'SOFT — two height figures found in sources of different vintage; range shown, lower figure modelled.'},
+ {id:'b99', name:'99 Bishopsgate', addr:'99 Bishopsgate', ey:2030, hM:240, storeys:54, pos:[-14,-245], fpX:44, fpZ:38,
+  soft:'Medium confidence — approved scheme, figures subject to change.'},
+ {id:'fa2', name:'2 Finsbury Avenue', addr:'Finsbury Avenue, Broadgate', ey:2027, hM:170, pos:[-200,-600],
+  heightLabel:'170 m east tower · 36 + 21 storeys + 12-storey podium',
+  parts:[ // [dx, dz, w, d, h] — east tower (verified 170m), west tower (derived 21/36×170≈99m), podium
+    [ 26, 0, 42, 40, 170],[ -30, 0, 38, 38, 99],[ 0, 0, 104, 44, 56]],
+  soft:'Topped out Jan 2026, due 2027 (3XN / Sir Robert McAlpine). An older 154 m figure appears in some lists — likely an earlier scheme iteration. West tower height derived proportionally, not verified.'}
+ /* 85 Gracechurch / 63 St Mary Axe / 130 Fenchurch: OMITTED — no verified heights supplied.
+    13–14 Appold Street (~156m approved): OMITTED — single source, no verified completion year.
+    Use Antony's consents-map dataset figures when available rather than guessing. */
+];
+
+/* Chapters — one-sentence markers, fade with the timeline */
+var CHAPTERS=[
+ {from:1980,to:1986.9,title:'1980–1986 · Deregulation dawn',
+  text:'Tower 42 gives the City its first true skyscraper; Big Bang deregulates the markets and Lloyd\u2019s makes the technology visible.'},
+ {from:1987,to:2003.9,title:'1987–2003 · The quiet decades',
+  text:'Broadgate builds out in phases while tall building pauses and Canary Wharf rises as the rival pole.'},
+ {from:2004,to:2014.9,title:'2004–2014 · The icon era',
+  text:'The Gherkin resets the City\u2019s relationship with iconic form; by 2014 the skyline is legible by silhouette alone.'},
+ {from:2015,to:2032,title:'2015 onwards · The cluster consolidates',
+  text:'The Scalpel, 22 Bishopsgate and a dense approved pipeline signal continued conviction in the office.'}
+];
+
+/* ============================ SCENE ============================ */
+var canvas=document.getElementById('scene'), renderer;
+try{
+  renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+}catch(e){ document.getElementById('fallback').style.display='block'; return; }
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(C.dark);
+scene.fog=new THREE.Fog(C.dark,1300,3000);
+
+var camera=new THREE.PerspectiveCamera(46,1,1,6000);
+var camTarget=new THREE.Vector3(0,95,-140);
+var sph={radius:1120, phi:1.06, theta:-0.65};   // spherical camera state
+
+/* Lighting — neutral so era colours read true */
+scene.add(new THREE.HemisphereLight(0xffffff,C.dark,0.85));
+var sun=new THREE.DirectionalLight(0xffffff,0.75);
+sun.position.set(420,760,-320); scene.add(sun);
+var fill=new THREE.DirectionalLight(0xffffff,0.22);
+fill.position.set(-500,300,500); scene.add(fill);
+
+/* Ground: Dark lightened ~6% (derived, see header comment) */
+var groundCol=new THREE.Color(C.dark).lerp(new THREE.Color(0xffffff),0.055);
+var ground=new THREE.Mesh(new THREE.PlaneGeometry(5200,5200),
+  new THREE.MeshLambertMaterial({color:groundCol}));
+ground.rotation.x=-Math.PI/2; ground.position.y=-0.5; scene.add(ground);
+
+/* Thames: geographically true southern boundary. Dark lerped 25% toward steel (derived). */
+var thamesCol=new THREE.Color(C.dark).lerp(new THREE.Color(C.steel),0.25);
+var thames=new THREE.Mesh(new THREE.PlaneGeometry(2600,240),
+  new THREE.MeshLambertMaterial({color:thamesCol}));
+thames.rotation.x=-Math.PI/2; thames.position.set(0,0.2,660); scene.add(thames);
+
+/* ---------- Geometry helpers (stylised massing) ---------- */
+function prism(bot,top,h){ // bot/top: arrays of 4 [x,z] corners; returns non-indexed geometry
+  var v=[],i;
+  function P(c,y){return [c[0],y,c[1]];}
+  function quad(a,b,c,d){v.push.apply(v,a);v.push.apply(v,b);v.push.apply(v,c);
+                         v.push.apply(v,a);v.push.apply(v,c);v.push.apply(v,d);}
+  for(i=0;i<4;i++){var j=(i+1)%4;
+    quad(P(bot[i],0),P(bot[j],0),P(top[j],h),P(top[i],h));}
+  quad(P(top[0],h),P(top[1],h),P(top[2],h),P(top[3],h)); // roof
+  var g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));
+  g.computeVertexNormals(); return g;
+}
+function rect(w,d){var x=w/2,z=d/2;return [[-x,-z],[x,-z],[x,z],[-x,z]];}
+function mat(hex){return new THREE.MeshLambertMaterial({color:hex,side:THREE.DoubleSide});}
+
+function buildLandmark(b){
+  var g=new THREE.Group(), m=mat(WAVE_COLOURS[b.wave]), mesh;
+  switch(b.shape){
+    case 'hex':
+      mesh=new THREE.Mesh(new THREE.CylinderGeometry(b.fp,b.fp,b.hM,6),m);
+      mesh.position.y=b.hM/2; g.add(mesh); break;
+    case 'lloyds':
+      mesh=new THREE.Mesh(new THREE.BoxGeometry(44,b.hM,32),m);
+      mesh.position.y=b.hM/2; g.add(mesh);
+      // exterior service towers — the building's signature; capped at the verified 95.1m
+      [[-26,-10],[26,-6],[20,20]].forEach(function(p){
+        var t=new THREE.Mesh(new THREE.BoxGeometry(9,95.1,9),m);
+        t.position.set(p[0],95.1/2,p[1]); g.add(t);});
+      break;
+    case 'gherkin':
+      var pts=[],prof=[[9,0],[21.5,45],[24,78],[20,120],[12.5,155],[5,172],[0.5,179.5],[0,180]];
+      prof.forEach(function(p){pts.push(new THREE.Vector2(p[0],p[1]));});
+      mesh=new THREE.Mesh(new THREE.LatheGeometry(pts,26),m); g.add(mesh); break;
+    case 'heron':
+      mesh=new THREE.Mesh(new THREE.BoxGeometry(b.fpX,b.roofM,b.fpZ),m);
+      mesh.position.y=b.roofM/2; g.add(mesh);
+      var mast=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.8,b.hM-b.roofM,8),m);
+      mast.position.set(b.fpX*0.25,b.roofM+(b.hM-b.roofM)/2,0); g.add(mast); break;
+    case 'wedge': // stylised Cheesegrater — sloped face oriented west, toward St Paul's
+      var wMesh=new THREE.Mesh(prism(rect(b.fpX,b.fpZ),
+        [[-b.fpX/2,-b.fpZ/2],[b.fpX/2,-b.fpZ/2],[b.fpX/2,-b.fpZ/2+10],[-b.fpX/2,-b.fpZ/2+10]],
+        b.hM),m);
+      wMesh.rotation.y=-Math.PI/2; g.add(wMesh); break;
+    case 'flare': // top wider than base — stylised Walkie-Talkie
+      g.add(new THREE.Mesh(prism(rect(b.fpX,b.fpZ),rect(b.fpX*1.32,b.fpZ*1.22),b.hM),m)); break;
+    case 'scalpel': // straight shaft with an angled top slice
+      var lo=b.hM*0.72;
+      g.add(new THREE.Mesh(prism(rect(b.fpX,b.fpZ),rect(b.fpX,b.fpZ),lo),m));
+      var topPart=prism(rect(b.fpX,b.fpZ),
+        [[-b.fpX/2,-b.fpZ/2],[b.fpX/2,-b.fpZ/2],[b.fpX/2,-b.fpZ/2+4],[-b.fpX/2,-b.fpZ/2+4]],
+        b.hM-lo);
+      var mTop=new THREE.Mesh(topPart,m); mTop.position.y=lo; g.add(mTop); break;
+    case 'arch': // Exchange House — box carried on expressed parabolic arches (stylised as arc ribs)
+      mesh=new THREE.Mesh(new THREE.BoxGeometry(b.fpX,b.hM*0.82,b.fpZ),m);
+      mesh.position.y=b.hM*0.18+b.hM*0.82/2; g.add(mesh);
+      [-b.fpZ/2,b.fpZ/2].forEach(function(zz){
+        var rib=new THREE.Mesh(new THREE.TorusGeometry(b.fpX*0.42,1.6,8,28,Math.PI),m);
+        rib.position.set(0,0,zz); g.add(rib);});
+      break;
+    case 'stack': // 8 Bishopsgate — stacked volumes
+      var tiers=[[1,1,0.42],[0.82,0.86,0.32],[0.6,0.7,0.26]], y=0;
+      tiers.forEach(function(t){
+        var hh=b.hM*t[2];
+        var box=new THREE.Mesh(new THREE.BoxGeometry(b.fpX*t[0],hh,b.fpZ*t[1]),m);
+        box.position.y=y+hh/2; y+=hh; g.add(box);});
+      break;
+    default:
+      mesh=new THREE.Mesh(new THREE.BoxGeometry(b.fpX,b.hM,b.fpZ),m);
+      mesh.position.y=b.hM/2; g.add(mesh);
+  }
+  g.position.set(b.pos[0],0,b.pos[1]);
+  g.scale.y=0.0001; g.visible=false;
+  g.userData=b; b._grp=g; b._mat=m;
+  scene.add(g); return g;
+}
+LANDMARKS.forEach(buildLandmark);
+
+/* Broadgate estate massing — steel-blue family stepped toward Dark (derived, see header),
+   so the individually dated towers still read as the data layer. Each block rises at its
+   phase year; all share one district tooltip. */
+var estateCol=new THREE.Color(C.steel).lerp(new THREE.Color(C.dark),0.45);
+var estateMat=new THREE.MeshLambertMaterial({color:estateCol});
+var estateBlocks=[];
+ESTATE.blocks.forEach(function(bl){
+  var mesh=new THREE.Mesh(new THREE.BoxGeometry(bl[2],bl[4],bl[3]),estateMat);
+  var grp=new THREE.Group(); mesh.position.y=bl[4]/2; grp.add(mesh);
+  grp.position.set(bl[0],0,bl[1]); grp.scale.y=0.0001; grp.visible=false;
+  grp.userData={district:ESTATE}; grp._phase=bl[5];
+  estateBlocks.push(grp); scene.add(grp);
+});
+
+/* Pipeline ghosts — dashed wireframe + faint fill, rise at expected year, post-2026 only */
+function ghostPart(g,w,h,d,dx,dz,fills,lines){
+  var box=new THREE.BoxGeometry(w,h,d);
+  var fillM=new THREE.MeshBasicMaterial({color:C.mid,transparent:true,opacity:0,depthWrite:false});
+  var fm=new THREE.Mesh(box,fillM); fm.position.set(dx,h/2,dz); g.add(fm);
+  var lineM=new THREE.LineDashedMaterial({color:C.mid,dashSize:7,gapSize:5,transparent:true,opacity:0});
+  var ls=new THREE.LineSegments(new THREE.EdgesGeometry(box),lineM);
+  ls.computeLineDistances(); ls.position.set(dx,h/2,dz); g.add(ls);
+  fills.push(fillM); lines.push(lineM);
+}
+if(INCLUDE_PIPELINE){
+  PIPELINE.forEach(function(p){
+    var g=new THREE.Group(), fills=[], lines=[];
+    if(p.parts){ p.parts.forEach(function(pt){ghostPart(g,pt[2],pt[4],pt[3],pt[0],pt[1],fills,lines);}); }
+    else{ ghostPart(g,p.fpX,p.hM,p.fpZ,0,0,fills,lines); }
+    g.position.set(p.pos[0],0,p.pos[1]); g.scale.y=0.0001; g.visible=false;
+    g.userData=p; p._grp=g; p._fills=fills; p._lines=lines;
+    scene.add(g);
+  });
+}
+
+/* ---------- Base fabric: undated stylised grey massing (static, never changes) ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return((t^t>>>14)>>>0)/4294967296;};}
+var rnd=mulberry32(19801986);
+var avoid=LANDMARKS.map(function(b){return {x:b.pos[0],z:b.pos[1],r:70};})
+  .concat(INCLUDE_PIPELINE?PIPELINE.map(function(p){return {x:p.pos[0],z:p.pos[1],r:p.parts?90:56};}):[])
+  .concat(ESTATE.blocks.map(function(bl){return {x:bl[0],z:bl[1],r:Math.max(bl[2],bl[3])*0.72+14};}));
+var cells=[];
+for(var gx=-620;gx<=620;gx+=68){
+  for(var gz=-760;gz<=520;gz+=68){
+    var jx=gx+(rnd()-0.5)*16, jz=gz+(rnd()-0.5)*16, skip=false;
+    for(var a=0;a<avoid.length;a++){var dx=jx-avoid[a].x,dz=jz-avoid[a].z;
+      if(dx*dx+dz*dz<avoid[a].r*avoid[a].r){skip=true;break;}}
+    if(rnd()<0.12) skip=true; // occasional open plot / street widening
+    if(!skip) cells.push({x:jx,z:jz,w:30+rnd()*24,d:30+rnd()*24,h:9+rnd()*26});
+  }
+}
+var baseGeo=new THREE.BoxGeometry(1,1,1); baseGeo.translate(0,0.5,0);
+var baseMat=new THREE.MeshLambertMaterial({color:C.darkLighter});
+var baseMesh=new THREE.InstancedMesh(baseGeo,baseMat,cells.length);
+var dummy=new THREE.Object3D(), shade=new THREE.Color();
+var dl=new THREE.Color(C.darkLighter), dk=new THREE.Color(C.dark);
+cells.forEach(function(c,i){
+  dummy.position.set(c.x,0,c.z); dummy.scale.set(c.w,c.h,c.d);
+  dummy.updateMatrix(); baseMesh.setMatrixAt(i,dummy.matrix);
+  shade.copy(dl).lerp(dk,rnd()*0.45);       // tonal variation within supplied values
+  baseMesh.setColorAt(i,shade);
+});
+if(baseMesh.instanceColor) baseMesh.instanceColor.needsUpdate=true;
+scene.add(baseMesh);
+
+/* ============================ STATE ============================ */
+var reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var year=reduceMotion?YEAR_BUILT_END:YEAR_START;
+var playing=!reduceMotion, autoCam=!reduceMotion;
+var gold=new THREE.Color(C.gold), black=new THREE.Color(0x000000);
+
+function smooth(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);}
+
+function updateBuildings(){
+  var i,b,t;
+  for(i=0;i<LANDMARKS.length;i++){
+    b=LANDMARKS[i];
+    t=smooth((year-(b.year-RISE_YEARS))/RISE_YEARS);
+    b._grp.visible=t>0.001;
+    b._grp.scale.y=Math.max(t,0.0001);
+    // active-era glow: gold emissive pulse while the tower is "current"
+    var act=Math.max(0,1-Math.abs(year-b.year)/1.6)*t;
+    b._mat.emissive.copy(black).lerp(gold,act*0.55*(0.75+0.25*Math.sin(perf*4)));
+  }
+  for(i=0;i<estateBlocks.length;i++){
+    var eb=estateBlocks[i];
+    t=smooth((year-(eb._phase-1.0))/1.0);
+    eb.visible=t>0.001; eb.scale.y=Math.max(t,0.0001);
+  }
+  if(INCLUDE_PIPELINE){
+    for(i=0;i<PIPELINE.length;i++){
+      var p=PIPELINE[i];
+      var start=Math.max(p.ey-RISE_YEARS,YEAR_BUILT_END+0.15);
+      t=smooth((year-start)/RISE_YEARS);
+      p._grp.visible=t>0.001;
+      p._grp.scale.y=Math.max(t,0.0001);
+      for(var k=0;k<p._lines.length;k++){p._lines[k].opacity=0.8*t;p._fills[k].opacity=0.06*t;}
+    }
+  }
+}
+
+/* Chapters */
+var chapEl=document.getElementById('chapter'),
+    chapT=document.getElementById('chapterTitle'),
+    chapX=document.getElementById('chapterText'), curChap=-1;
+function updateChapter(){
+  var idx=-1,i;
+  for(i=0;i<CHAPTERS.length;i++) if(year>=CHAPTERS[i].from&&year<=CHAPTERS[i].to){idx=i;break;}
+  if(idx!==curChap){
+    curChap=idx;
+    if(idx<0){chapEl.style.opacity=0;}
+    else{chapT.textContent=CHAPTERS[idx].title;chapX.textContent=CHAPTERS[idx].text;
+         chapEl.style.opacity=1;}
+  }
+}
+
+/* ============================ UI ============================ */
+var yearEl=document.getElementById('yearReadout'),
+    playBtn=document.getElementById('playBtn'),
+    camBtn=document.getElementById('camBtn'),
+    scrubWrap=document.getElementById('scrubWrap'),
+    track=document.getElementById('scrubTrack'),
+    thumb=document.getElementById('thumb'),
+    ticks=document.getElementById('ticks'),
+    tooltip=document.getElementById('tooltip'),
+    ttBody=document.getElementById('ttBody'),
+    hint=document.getElementById('hint');
+
+/* Era bands on the scrubber (doubles as an in-context legend) */
+var SPAN=YEAR_END-YEAR_START;
+[[1980,1987,'#D4930F'],[1987,2004,'#7DA7C4'],[2004,2015,'#fbb040'],
+ [2015,2026,'#FFFFFF'],[2026,2032,'repeating-linear-gradient(45deg,#4A5568 0 5px,rgba(160,174,192,.55) 5px 8px)']]
+.forEach(function(bd){
+  var d=document.createElement('div'); d.className='band';
+  d.style.width=((bd[1]-bd[0])/SPAN*100)+'%';
+  d.style.background=bd[2]; track.appendChild(d);
+});
+[1980,1990,2000,2010,2020,2032].forEach(function(y){
+  var t=document.createElement('div');t.className='tick';
+  t.style.left=((y-YEAR_START)/SPAN*100)+'%';t.textContent=y;ticks.appendChild(t);
+});
+
+function setYear(y){ year=Math.max(YEAR_START,Math.min(YEAR_END,y)); }
+function updateScrub(){
+  var f=(year-YEAR_START)/SPAN;
+  thumb.style.left='calc('+(f*100)+'% - 2px)';
+  scrubWrap.setAttribute('aria-valuenow',Math.round(year));
+  yearEl.textContent=Math.floor(year);
+}
+
+playBtn.addEventListener('click',function(){
+  playing=!playing;
+  if(playing&&year>=YEAR_END-0.01) setYear(YEAR_START);
+  playBtn.textContent=playing?'Pause':'Play';
+  playBtn.setAttribute('aria-pressed',playing);
+});
+camBtn.addEventListener('click',function(){
+  autoCam=!autoCam;
+  camBtn.setAttribute('aria-pressed',autoCam);
+});
+
+/* Scrubbing */
+var scrubbing=false;
+function scrubTo(clientX){
+  var r=scrubWrap.getBoundingClientRect();
+  setYear(YEAR_START+SPAN*Math.max(0,Math.min(1,(clientX-r.left)/r.width)));
+}
+scrubWrap.addEventListener('pointerdown',function(e){
+  scrubbing=true;scrubWrap.setPointerCapture(e.pointerId);scrubTo(e.clientX);});
+scrubWrap.addEventListener('pointermove',function(e){if(scrubbing)scrubTo(e.clientX);});
+scrubWrap.addEventListener('pointerup',function(){scrubbing=false;});
+scrubWrap.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight')setYear(year+1);
+  if(e.key==='ArrowLeft')setYear(year-1);
+});
+
+/* ---------- Tooltip ---------- */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function showTooltip(data,px,py){
+  var h='';
+  if(data.district){ var d=data.district;
+    h='<h3>'+esc(d.name)+'</h3><div class="addr">'+esc(d.addr)+'</div>'
+     +'<div class="data">Phased 1985–1991<br><span>Masterplan</span> '+esc(d.arch)+'</div>'
+     +'<div class="flag" style="color:#A0AEC0">'+esc(d.note)+'</div>';
+  } else {
+    var b=data, hl=b.heightLabel||(b.hM+' m');
+    h='<h3>'+esc(b.name)+'</h3><div class="addr">'+esc(b.addr)+'</div><div class="data">';
+    h+=b.ey?('<span>Expected</span> '+b.ey+' · '+esc(hl)):('<span>Completed</span> '+b.year+' · '+esc(hl));
+    if(b.storeys) h+=' · '+b.storeys+' storeys';
+    if(b.arch) h+='<br><span>Architect</span> '+esc(b.arch);
+    h+='</div>';
+    if(b.ey) h+='<div class="flag">Approved / under construction — not yet built.</div>';
+    if(b.soft) h+='<div class="flag">'+esc(b.soft)+'</div>';
+    if(b.note&&!b.soft) h+='<div class="flag" style="color:#A0AEC0">'+esc(b.note)+'</div>';
+  }
+  ttBody.innerHTML=h;
+  tooltip.style.display='block';
+  var w=tooltip.offsetWidth,hh=tooltip.offsetHeight;
+  tooltip.style.left=Math.min(px+14,window.innerWidth-w-12)+'px';
+  tooltip.style.top=Math.min(py-10,window.innerHeight-hh-12)+'px';
+}
+tooltip.querySelector('.close').addEventListener('click',function(){tooltip.style.display='none';});
+
+/* ---------- Camera controls (custom orbit — no external OrbitControls dependency) ---------- */
+var dragging=false,px0=0,py0=0,moved=0,pinch=null;
+canvas.addEventListener('pointerdown',function(e){
+  dragging=true;moved=0;px0=e.clientX;py0=e.clientY;
+  canvas.classList.add('dragging');canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove',function(e){
+  if(!dragging)return;
+  var dx=e.clientX-px0,dy=e.clientY-py0;px0=e.clientX;py0=e.clientY;
+  moved+=Math.abs(dx)+Math.abs(dy);
+  if(moved>5) autoCam=false, camBtn.setAttribute('aria-pressed','false');
+  sph.theta-=dx*0.005;
+  sph.phi=Math.max(0.3,Math.min(1.45,sph.phi-dy*0.004));
+});
+canvas.addEventListener('pointerup',function(e){
+  dragging=false;canvas.classList.remove('dragging');
+  if(moved<6) pick(e.clientX,e.clientY);
+});
+canvas.addEventListener('wheel',function(e){
+  e.preventDefault();
+  sph.radius=Math.max(320,Math.min(2200,sph.radius*(1+e.deltaY*0.0011)));
+},{passive:false});
+/* pinch zoom */
+canvas.addEventListener('touchmove',function(e){
+  if(e.touches.length===2){
+    var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,
+                     e.touches[0].clientY-e.touches[1].clientY);
+    if(pinch!==null) sph.radius=Math.max(320,Math.min(2200,sph.radius*(pinch/d)));
+    pinch=d; e.preventDefault();
+  }
+},{passive:false});
+canvas.addEventListener('touchend',function(){pinch=null;});
+
+/* Raycast picking — landmarks, ghosts and the Broadgate patch only */
+var ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+function pick(cx,cy){
+  ndc.x=(cx/window.innerWidth)*2-1; ndc.y=-(cy/window.innerHeight)*2+1;
+  ray.setFromCamera(ndc,camera);
+  var targets=[];
+  LANDMARKS.forEach(function(b){if(b._grp.visible)targets.push(b._grp);});
+  if(INCLUDE_PIPELINE)PIPELINE.forEach(function(p){if(p._grp.visible)targets.push(p._grp);});
+  estateBlocks.forEach(function(eb){if(eb.visible)targets.push(eb);});
+  var hits=ray.intersectObjects(targets,true);
+  if(hits.length){
+    var o=hits[0].object;
+    while(o&&(!o.userData||(!o.userData.name&&!o.userData.district)))o=o.parent;
+    if(o){showTooltip(o.userData,cx,cy);return;}
+  }
+  tooltip.style.display='none';
+}
+
+/* ============================ LOOP ============================ */
+var clock=new THREE.Clock(), perf=0;
+function resize(){
+  var w=window.innerWidth,h=window.innerHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize); resize();
+
+setTimeout(function(){hint.style.opacity=0;},6500);
+
+function frame(){
+  requestAnimationFrame(frame);
+  var dt=Math.min(clock.getDelta(),0.1); perf+=dt;
+  if(playing&&!scrubbing){
+    setYear(year+PLAY_RATE*dt);
+    if(year>=YEAR_END){ setYear(YEAR_START); } // loop
+  }
+  if(autoCam&&!dragging) sph.theta+=dt*0.055;  // guided flythrough: slow continuous orbit
+  camera.position.set(
+    camTarget.x+sph.radius*Math.sin(sph.phi)*Math.sin(sph.theta),
+    camTarget.y+sph.radius*Math.cos(sph.phi),
+    camTarget.z+sph.radius*Math.sin(sph.phi)*Math.cos(sph.theta));
+  camera.lookAt(camTarget);
+  updateBuildings(); updateChapter(); updateScrub();
+  renderer.render(scene,camera);
+}
+updateBuildings(); updateChapter(); updateScrub();
+if(reduceMotion){playBtn.textContent='Play';playBtn.setAttribute('aria-pressed','false');
+  camBtn.setAttribute('aria-pressed','false');}
+frame();
+})();
+</script>
+</body>
+</html>
